@@ -28,7 +28,6 @@ void loop(){
   //despite one motor being mounted backwards. 
 
   int feeder_speed = ppm.getChannel(5);
-  Serial.println(feeder_speed);
   feeder.write(feeder_speed);
 
 }
