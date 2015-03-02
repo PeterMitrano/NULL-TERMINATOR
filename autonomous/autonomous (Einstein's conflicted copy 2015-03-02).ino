@@ -1,9 +1,5 @@
 #include <Servo.h>
 
-//kill switch
-const int KILL_PIN = 22;
-boolean cancelled = false;
-
 //Elevator
 Servo elevator;
 const int ELEVATOR_PIN = 6;
@@ -11,8 +7,7 @@ const int ELEVATOR_PIN = 6;
 
 //rangefinder
 const int RANGEFINDER_PIN = A0;
-const int WALL_DIST = 280;
-const int REV_DIST = 100;
+const int WALL_DIST = 277;
 
 //line sensors
 //1 or HIGH means white
@@ -21,8 +16,8 @@ const int RIGHT_SENSOR = 49;
 boolean lastR,lastL;
 
 //Drive train
-int LEFT_MOTOR_PIN = 8;
-int RIGHT_MOTOR_PIN = 7;
+int LEFT_MOTOR_PIN = 7;
+int RIGHT_MOTOR_PIN = 8;
 Servo left;
 Servo right;
 
@@ -47,30 +42,15 @@ void setup(){
   flap.attach(FLAP_PIN);
   pinMode(LEFT_SENSOR,INPUT_PULLUP);
   pinMode(RIGHT_SENSOR,INPUT_PULLUP);
-  pinMode(KILL_PIN,INPUT_PULLUP);  
   t0 = millis();
 }
 
 
 void loop(){
 
-  if (digitalRead(KILL_PIN) == LOW){
-    cancelled = true;
-  }
-
-  if (!cancelled){
-    fullRoutine();
-  }
-  else {
-    flap.write(90);
-    right.write(90);
-    left.write(90);
-    elevator.write(90);    
-  }
-}
-
-void fullRoutine(){
   updateState();
+  
+  Serial.println(state);
 
   switch(state){
   case LIFTING_FLAP:
@@ -80,22 +60,20 @@ void fullRoutine(){
     dropFlap();
     break;
   case DRIVING:
-    setMotors(40,40);
+    setMotors(50,50);
     break;
   case DROPPING:
     liftFlap();
-    setMotors(0,0);    
     break;
   case REVERSING:
-    setMotors(-40,-60);
-    dropFlap();    
+    setMotors(-50,-50);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-180,30);
+    setMotors(-80,80);
     break;
   case COLLECTING:
-    setMotors(0,0);
-    elevator.write(110);
+    setMotors(100,100);
+    elevator.write(130);
     break;
   case TURNING_TO_SCORE:
     setMotors(-80,80);
@@ -117,7 +95,7 @@ void updateState(){
     break;
   case DROPPING_FLAP:
     if (dt>1000){
-      state = DRIVING;
+      //state = DRIVING;
       t0=millis();
     }
     break;
@@ -134,16 +112,8 @@ void updateState(){
     }
     break;
   case REVERSING:
-    if (doneReversing() && dt>1000){
-      t0=millis();
-      state=TURNING_TO_COLLECT;
-    }
     break;
   case TURNING_TO_COLLECT:
-    if (dt>3000){
-      t0=millis();
-      state=COLLECTING;
-    }  
     break;
   case COLLECTING:
     break;
@@ -155,7 +125,7 @@ void updateState(){
 }
 
 void liftFlap(){
-  flap.write(10);
+  flap.write(0);
 }
 
 
@@ -167,25 +137,8 @@ boolean droppedBass(){
   return false;
 }
 
-boolean doneReversing(){
-  int i,sum=0;
-  float avg;
-  for (i=0;i<50;i++){
-    sum+=analogRead(RANGEFINDER_PIN);
-  }
-  avg = sum/50.0;
-  Serial.println(avg);
-  return abs(avg - REV_DIST) < 5;  
-}
-
 boolean atWall(){
-  int i,sum=0;
-  float avg;
-  for (i=0;i<50;i++){
-    sum+=analogRead(RANGEFINDER_PIN);
-  }
-  avg = sum/50.0;
-  return abs(avg - WALL_DIST) < 5;
+  return analogRead(RANGEFINDER_PIN) < WALL_DIST;
 }
 
 //overall strategy is:
@@ -228,11 +181,8 @@ void turnLeft(){
 //enter left and right speed from -100 to 100
 void setMotors(int l, int r){
   left.write(map(l,-100,100,0,180));
-  right.write(map(r,-100,100,170,10)); //compensate because other motor is weaker
+  right.write(map(r,-100,100,160,20)); //compensate because other motor is weaker
 }
-
-
-
 
 
 
