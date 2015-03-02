@@ -10,9 +10,11 @@ const int ELEVATOR_PIN = 6;
 
 
 //rangefinder
-const int RANGEFINDER_PIN = A0;
-const int WALL_DIST = 285;
-const int REV_DIST = 120;
+const int FRONT_RANGEFINDER_PIN = A0;
+const int BACK_RANGEFINDER_PIN = A1;
+const int WALL_DIST = 300;
+const int REV_DIST = 135;
+const int TOLERANCE = 10;
 
 //line sensors
 //1 or HIGH means white
@@ -26,17 +28,21 @@ int RIGHT_MOTOR_PIN = 7;
 Servo left;
 Servo right;
 
+//limit switch
+const int SCORING_LIMIT_PIN = 23;
+
 //flap
 const int FLAP_PIN = 9;
 Servo flap;
 
 //Autonomous is controlled by a statemachine
-//Autonomous strategy is to line track and drop the bass
+//Autonomous strategy is to drop the bass from the front edge
 //  then collect balls down and back the course
 //  then score those balls in the shabangabang
 enum STATE {
   LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING};
 STATE state = LIFTING_FLAP;
+
 int t0;
 
 void setup(){
@@ -47,8 +53,12 @@ void setup(){
   flap.attach(FLAP_PIN);
   pinMode(LEFT_SENSOR,INPUT_PULLUP);
   pinMode(RIGHT_SENSOR,INPUT_PULLUP);
-  pinMode(KILL_PIN,INPUT_PULLUP);  
+  pinMode(KILL_PIN,INPUT_PULLUP);
+  pinMode(SCORING_LIMIT_PIN,INPUT_PULLUP);  
   t0 = millis();
+  
+  while (digitalRead(KILL_PIN));
+  delay(2000);
 }
 
 
@@ -78,36 +88,40 @@ void fullRoutine(){
     break;
   case DROPPING_FLAP:
     dropFlap();
-    break;
+    break;  
   case DRIVING:
-    setMotors(180,10);
+    setMotors(45,45);
     break;
   case DROPPING:
     liftFlap();
     setMotors(0,0);    
     break;
   case REVERSING:
-    setMotors(-40,-60);
-    dropFlap();    
+    setMotors(-40,-40);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-180,50);
+    setMotors(-180,160);
     break;
   case COLLECTING:
-    setMotors(70,60);
-    elevator.write(130);
+    setMotors(85,55);
+    elevator.write(125);
     break;
   case TURNING_TO_SCORE:
-    setMotors(0,0);
+    elevator.write(90);  
+    setMotors(-80,80);
     break;
   case SCORING:
-    setMotors(50,50);
+    setMotors(0,0);
     break;    
   }
 }
 
 void updateState(){
+  //time for each state
+  //use t0=millis() at the end of each state to reset the time
+  
   int dt = millis()- t0;
+  
   switch(state){
   case LIFTING_FLAP:
     if (dt>1000){
@@ -134,28 +148,37 @@ void updateState(){
     }
     break;
   case REVERSING:
-    if (doneReversing() && dt>1000){
+    if (doneReversing() && dt>1000 ){
       t0=millis();
       state=TURNING_TO_COLLECT;
     }
     break;
   case TURNING_TO_COLLECT:
-    if (dt>3500){
+    if (dt>3000){
       t0=millis();
       state=COLLECTING;
     }  
     break;
   case COLLECTING:
-    if (atWall()){
+    if (atWall() && dt>5000){
       t0=millis();
       state = TURNING_TO_SCORE;
     }
     break;
   case TURNING_TO_SCORE:
+    if (alignedToWall()){
+      t0=millis();
+      state = SCORING;
+    }
     break;
   case SCORING:
     break;    
   }
+}
+
+//turns until the back sensor reads a certain distance
+boolean alignedToWall(){
+  return abs(range(BACK_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
 }
 
 void liftFlap(){
@@ -172,24 +195,12 @@ boolean droppedBass(){
 }
 
 boolean doneReversing(){
-  int i,sum=0;
-  float avg;
-  for (i=0;i<50;i++){
-    sum+=analogRead(RANGEFINDER_PIN);
-  }
-  avg = sum/50.0;
-  Serial.println(avg);
-  return abs(avg - REV_DIST) < 5;  
+  return abs(range(FRONT_RANGEFINDER_PIN) - REV_DIST) < TOLERANCE;  
 }
 
+
 boolean atWall(){
-  int i,sum=0;
-  float avg;
-  for (i=0;i<50;i++){
-    sum+=analogRead(RANGEFINDER_PIN);
-  }
-  avg = sum/50.0;
-  return abs(avg - WALL_DIST) < 10;
+  return abs(range(FRONT_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
 }
 
 //overall strategy is:
@@ -214,6 +225,17 @@ void lineTrack(int R, int L){
   delay(20);
 }
 
+//takes a analog pin and returns the distance of a 50 size sample on that rangefinder
+float range(const int PIN){
+  int i,sum=0;
+  float avg;
+  for (i=0;i<50;i++){
+    sum+=analogRead(PIN);
+  }
+  avg = sum/50.0;
+  return avg;
+}
+
 //equal speed to motors
 void forward(){
   setMotors(100,100);
@@ -234,16 +256,3 @@ void setMotors(int l, int r){
   left.write(map(l,-100,100,0,180));
   right.write(map(r,-100,100,160,30)); //compensate because other motor is weaker
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
