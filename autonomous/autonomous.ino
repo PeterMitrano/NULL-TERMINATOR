@@ -11,8 +11,8 @@ const int ELEVATOR_PIN = 6;
 
 //rangefinder
 const int RANGEFINDER_PIN = A0;
-const int WALL_DIST = 280;
-const int REV_DIST = 100;
+const int WALL_DIST = 285;
+const int REV_DIST = 120;
 
 //line sensors
 //1 or HIGH means white
@@ -80,7 +80,7 @@ void fullRoutine(){
     dropFlap();
     break;
   case DRIVING:
-    setMotors(40,40);
+    setMotors(180,10);
     break;
   case DROPPING:
     liftFlap();
@@ -91,14 +91,14 @@ void fullRoutine(){
     dropFlap();    
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-180,30);
+    setMotors(-180,50);
     break;
   case COLLECTING:
-    setMotors(0,0);
-    elevator.write(110);
+    setMotors(70,60);
+    elevator.write(130);
     break;
   case TURNING_TO_SCORE:
-    setMotors(-80,80);
+    setMotors(0,0);
     break;
   case SCORING:
     setMotors(50,50);
@@ -140,12 +140,16 @@ void updateState(){
     }
     break;
   case TURNING_TO_COLLECT:
-    if (dt>3000){
+    if (dt>3500){
       t0=millis();
       state=COLLECTING;
     }  
     break;
   case COLLECTING:
+    if (atWall()){
+      t0=millis();
+      state = TURNING_TO_SCORE;
+    }
     break;
   case TURNING_TO_SCORE:
     break;
@@ -185,7 +189,7 @@ boolean atWall(){
     sum+=analogRead(RANGEFINDER_PIN);
   }
   avg = sum/50.0;
-  return abs(avg - WALL_DIST) < 5;
+  return abs(avg - WALL_DIST) < 10;
 }
 
 //overall strategy is:
@@ -228,7 +232,7 @@ void turnLeft(){
 //enter left and right speed from -100 to 100
 void setMotors(int l, int r){
   left.write(map(l,-100,100,0,180));
-  right.write(map(r,-100,100,170,10)); //compensate because other motor is weaker
+  right.write(map(r,-100,100,160,30)); //compensate because other motor is weaker
 }
 
 
