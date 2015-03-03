@@ -7,16 +7,19 @@
  autonomous(20); will run for 20 seconds after the transmitter is 
  turned on. The code will not start until the controller is turned on.
  There are print statements commented out that were used to test */
-
+#include <Servo.h>
 #include <PPM.h> // includes the PPM library
 
 
 PPM ppm(2); // initializes a PPM object named ppm onto pin #2
 
 
+Servo flap;
+
 void setup() {
   Serial.begin(9600); // Starts the serial port
-
+  flap.attach(9);
+  flap.write(180);
   // Put your setup code here, to run once:
 
 }

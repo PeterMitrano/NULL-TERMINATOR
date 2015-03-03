@@ -13,6 +13,7 @@ const int ELEVATOR_PIN = 6;
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 300;
+const int FAR_WALL_DIST = 240;
 const int REV_DIST = 135;
 const int TOLERANCE = 10;
 
@@ -51,14 +52,12 @@ void setup(){
   right.attach(RIGHT_MOTOR_PIN);
   left.attach(LEFT_MOTOR_PIN);
   flap.attach(FLAP_PIN);
+  flap.write(180);
   pinMode(LEFT_SENSOR,INPUT_PULLUP);
   pinMode(RIGHT_SENSOR,INPUT_PULLUP);
   pinMode(KILL_PIN,INPUT_PULLUP);
   pinMode(SCORING_LIMIT_PIN,INPUT_PULLUP);  
   t0 = millis();
-  
-  while (digitalRead(KILL_PIN));
-  delay(2000);
 }
 
 
@@ -84,7 +83,7 @@ void fullRoutine(){
 
   switch(state){
   case LIFTING_FLAP:
-    liftFlap();
+    halfLiftFlap();
     break;
   case DROPPING_FLAP:
     dropFlap();
@@ -97,18 +96,18 @@ void fullRoutine(){
     setMotors(0,0);    
     break;
   case REVERSING:
-    setMotors(-40,-40);
+    setMotors(-40,-45);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-180,160);
+    setMotors(-40,30);
     break;
   case COLLECTING:
-    setMotors(85,55);
+    setMotors(65,55);
     elevator.write(125);
     break;
   case TURNING_TO_SCORE:
     elevator.write(90);  
-    setMotors(-80,80);
+    setMotors(-50,50);
     break;
   case SCORING:
     setMotors(0,0);
@@ -154,13 +153,13 @@ void updateState(){
     }
     break;
   case TURNING_TO_COLLECT:
-    if (dt>3000){
+    if (dt>2500){
       t0=millis();
       state=COLLECTING;
     }  
     break;
   case COLLECTING:
-    if (atWall() && dt>5000){
+    if (atFarWall() && dt>5000){
       t0=millis();
       state = TURNING_TO_SCORE;
     }
@@ -181,6 +180,10 @@ boolean alignedToWall(){
   return abs(range(BACK_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
 }
 
+void halfLiftFlap(){
+  flap.write(90);
+}
+
 void liftFlap(){
   flap.write(10);
 }
@@ -198,6 +201,9 @@ boolean doneReversing(){
   return abs(range(FRONT_RANGEFINDER_PIN) - REV_DIST) < TOLERANCE;  
 }
 
+boolean atFarWall(){
+  return abs(range(FRONT_RANGEFINDER_PIN) - FAR_WALL_DIST) < TOLERANCE;
+}
 
 boolean atWall(){
   return abs(range(FRONT_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
