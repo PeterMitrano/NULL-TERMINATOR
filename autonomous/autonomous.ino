@@ -199,7 +199,8 @@ void updateState(){
     }  
     break;
   case COLLECTING:
-    if (atFarWall() && dt>5000){
+    //check 
+    if (atFarWall()){
       t0=millis();
       state = TURNING_TO_SCORE;
     }

@@ -3,10 +3,10 @@
 
 //Controller
 PPM ppm(2);
-const int left_joystick = 3;
-const int right_joystick = 2;
-const int left_button = 5;
-const int right_button = 6;
+const int LEFT_JOYSTICK = 3;
+const int RIGHT_JOYSTICK = 2;
+const int LEFT_BUTTON = 5;
+const int RIGHT_BUTTON = 6;
 
 //Motors
 Servo left;
@@ -31,8 +31,8 @@ void setup(){
 }
 
 void loop(){
-  left_drive = ppm.getChannel(left_joystick);
-  right_drive = ppm.getChannel(right_joystick);
+  left_drive = ppm.getChannel(LEFT_JOYSTICK);
+  right_drive = ppm.getChannel(RIGHT_JOYSTICK);
 
   left.write(180 - left_drive);  //drive the left motor corresponding to the controller
   right.write(right_drive); //drive the left motor corresponding to the controller
@@ -40,7 +40,7 @@ void loop(){
   //despite one motor being mounted backwards. 
 
   //remap feeder to slow it down
-  elevator_drive = map(ppm.getChannel(left_button),0,180,50,130);
+  elevator_drive = map(ppm.getChannel(LEFT_BUTTON),0,180,50,130);
   feeder.write(elevator_drive);
 
   flap.write(0);
