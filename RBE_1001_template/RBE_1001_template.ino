@@ -5,7 +5,7 @@
 int left_drive = 90;
 int right_drive = 90;
 int flap_drive = 90;
-int elevator_drive = 90;
+int elevator_drive = 70;
 
 //kill switch
 const int KILL_PIN = 22;
@@ -225,7 +225,7 @@ void updateState(){
   case REVERSING:
     if (doneReversing()){
       t0=millis();
-      pulsesStopFwd();
+      pulseStopFwd();
       state=TURNING_TO_COLLECT;
     }
     break;
@@ -259,12 +259,12 @@ void updateState(){
 //pulses reverse for a sec to stop it
 void pulseStopFwd(){
   setMotors(30,30);
-  delay(75);
+  delay(50);
 }      
 
 void pulseStopRev(){
   setMotors(-30,-30);
-  delay(75);
+  delay(50);
 }      
 
 //turns until the back sensor reads a certain distance
