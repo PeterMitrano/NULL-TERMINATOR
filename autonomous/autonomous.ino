@@ -16,10 +16,10 @@ const int RIGHT_BUMP_PIN = 25;
 //rangefinder
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
-const int WALL_DIST = 310;
+const int WALL_DIST = 315;
 const int SCORING_WALL_DIST = 340;
-const int FAR_WALL_DIST = 260;
-const int REV_DIST = 70;
+const int FAR_WALL_DIST = 255;
+const int REV_DIST = 65;
 const int TOLERANCE = 10;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
@@ -110,12 +110,12 @@ void fullRoutine(){
     setMotors(-50,50);
     break;
   case COLLECTING:
-    setMotors(39,35);
+    setMotors(35,35);
     elevator.write(130);
     break;
   case TURNING_TO_SCORE:
-    halfLiftFlap();  
-    setMotors(-40,45);
+    liftFlap();  
+    setMotors(-36,40);
     break;
   case SCORING:
     elevator.write(90);
@@ -141,7 +141,7 @@ void halfLiftFlap(){
 }
 
 void liftFlap(){
-  flap.write(10);
+  flap.write(0);
 }
 
 
