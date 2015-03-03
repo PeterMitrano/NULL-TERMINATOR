@@ -17,9 +17,9 @@ const int RIGHT_BUMP_PIN = 25;
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 310;
-const int SCORING_WALL_DIST = 320;
-const int FAR_WALL_DIST = 240;
-const int REV_DIST = 135;
+const int SCORING_WALL_DIST = 340;
+const int FAR_WALL_DIST = 260;
+const int REV_DIST = 70;
 const int TOLERANCE = 10;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
@@ -97,7 +97,7 @@ void fullRoutine(){
     dropFlap();
     break;  
   case DRIVING:
-    setMotors(40,45);
+    setMotors(40,47);
     break;
   case DROPPING:
     liftFlap();
@@ -107,18 +107,19 @@ void fullRoutine(){
     trackWall(-40);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-70,75);
+    setMotors(-50,50);
     break;
   case COLLECTING:
-    setMotors(65,55);
-    elevator.write(120);
+    setMotors(39,35);
+    elevator.write(130);
     break;
   case TURNING_TO_SCORE:
-    setMotors(-50,55);
+    halfLiftFlap();  
+    setMotors(-40,45);
     break;
   case SCORING:
     elevator.write(90);
-    trackWall(25);
+    setMotors(60,60);
     break;
   case DONE:
     left.write(90);
@@ -210,7 +211,7 @@ void updateState(){
     }
     break;
   case SCORING:
-    if (atShabangabang() || dt > 3000){
+    if (atShabangabang()){
       state = DONE;
     }
     break;    
@@ -223,7 +224,7 @@ boolean alignedToWall(){
 }
 
 boolean atShabangabang(){
-  return digitalRead(SCORING_LIMIT_PIN);
+  return digitalRead(SCORING_LIMIT_PIN) == LOW;
 }
 
 boolean doneReversing(){
