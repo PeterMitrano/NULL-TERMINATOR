@@ -9,14 +9,20 @@ Servo elevator;
 const int ELEVATOR_PIN = 6;
 
 
+//bump sensors
+const int LEFT_BUMP_PIN = 24;
+const int RIGHT_BUMP_PIN = 25;
+
 //rangefinder
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
-const int WALL_DIST = 300;
+const int WALL_DIST = 310;
+const int SCORING_WALL_DIST = 320;
 const int FAR_WALL_DIST = 240;
 const int REV_DIST = 135;
 const int TOLERANCE = 10;
-
+const int TRACK_DIST = 195;
+const float kPWall = 0.3;
 //line sensors
 //1 or HIGH means white
 const int LEFT_SENSOR = 48;
@@ -41,7 +47,7 @@ Servo flap;
 //  then collect balls down and back the course
 //  then score those balls in the shabangabang
 enum STATE {
-  LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING};
+  LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING, DONE};
 STATE state = LIFTING_FLAP;
 
 int t0;
@@ -53,6 +59,8 @@ void setup(){
   left.attach(LEFT_MOTOR_PIN);
   flap.attach(FLAP_PIN);
   flap.write(180);
+  pinMode(LEFT_BUMP_PIN,INPUT_PULLUP);
+  pinMode(RIGHT_BUMP_PIN,INPUT_PULLUP);  
   pinMode(LEFT_SENSOR,INPUT_PULLUP);
   pinMode(RIGHT_SENSOR,INPUT_PULLUP);
   pinMode(KILL_PIN,INPUT_PULLUP);
@@ -89,38 +97,69 @@ void fullRoutine(){
     dropFlap();
     break;  
   case DRIVING:
-    setMotors(45,45);
+    setMotors(40,45);
     break;
   case DROPPING:
     liftFlap();
     setMotors(0,0);    
     break;
   case REVERSING:
-    setMotors(-40,-45);
+    trackWall(-40);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-40,30);
+    setMotors(-70,75);
     break;
   case COLLECTING:
     setMotors(65,55);
-    elevator.write(125);
+    elevator.write(120);
     break;
   case TURNING_TO_SCORE:
-    elevator.write(90);  
-    setMotors(-50,50);
+    setMotors(-50,55);
     break;
   case SCORING:
-    setMotors(0,0);
-    break;    
+    elevator.write(90);
+    trackWall(25);
+    break;
+  case DONE:
+    left.write(90);
+    right.write(90);
   }
+}
+
+
+//take power from -100 to 100, and follow wall at TRACK_DIST
+void trackWall(int power){
+  float distance_to_wall = range(BACK_RANGEFINDER_PIN);
+  float error = distance_to_wall - TRACK_DIST;
+  Serial.println(error*kPWall);
+  setMotors(power+kPWall*error,power-kPWall*error);
+}
+
+void halfLiftFlap(){
+  flap.write(90);
+}
+
+void liftFlap(){
+  flap.write(10);
+}
+
+
+void dropFlap(){
+  flap.write(180);
+}
+
+//enter left and right speed from -100 to 100
+void setMotors(int l, int r){
+  left.write(map(l,-100,100,0,180));
+  right.write(map(r,-100,100,160,30)); //compensate because other motor is weaker
 }
 
 void updateState(){
   //time for each state
   //use t0=millis() at the end of each state to reset the time
-  
-  int dt = millis()- t0;
-  
+
+    int dt = millis()- t0;
+
   switch(state){
   case LIFTING_FLAP:
     if (dt>1000){
@@ -153,7 +192,7 @@ void updateState(){
     }
     break;
   case TURNING_TO_COLLECT:
-    if (dt>2500){
+    if (flatToWall()){
       t0=millis();
       state=COLLECTING;
     }  
@@ -171,30 +210,20 @@ void updateState(){
     }
     break;
   case SCORING:
+    if (atShabangabang() || dt > 3000){
+      state = DONE;
+    }
     break;    
   }
 }
 
 //turns until the back sensor reads a certain distance
 boolean alignedToWall(){
-  return abs(range(BACK_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
+  return abs(range(BACK_RANGEFINDER_PIN) - SCORING_WALL_DIST) < TOLERANCE;
 }
 
-void halfLiftFlap(){
-  flap.write(90);
-}
-
-void liftFlap(){
-  flap.write(10);
-}
-
-
-void dropFlap(){
-  flap.write(180);
-}
-
-boolean droppedBass(){
-  return false;
+boolean atShabangabang(){
+  return digitalRead(SCORING_LIMIT_PIN);
 }
 
 boolean doneReversing(){
@@ -209,28 +238,6 @@ boolean atWall(){
   return abs(range(FRONT_RANGEFINDER_PIN) - WALL_DIST) < TOLERANCE;
 }
 
-//overall strategy is:
-//if you see double black, go full
-//if you see white on left, turn right until you see white on right
-//if you see white on right, turn left until you see white on left
-void lineTrack(int R, int L){
-  if (R && L){
-    forward();
-  }
-  else if (!L&&lastR){
-    turnRight();
-  }
-  else if (!R&&lastL){
-    turnLeft();
-  }
-
-
-  lastR=R;
-  lastL=L;
-
-  delay(20);
-}
-
 //takes a analog pin and returns the distance of a 50 size sample on that rangefinder
 float range(const int PIN){
   int i,sum=0;
@@ -242,23 +249,12 @@ float range(const int PIN){
   return avg;
 }
 
-//equal speed to motors
-void forward(){
-  setMotors(100,100);
+boolean flatToWall(){
+  return digitalRead(LEFT_BUMP_PIN) == LOW; //&& digitalRead(RIGHT_BUMP_PIN) == LOW;
 }
 
-//turns heavy on left wheel, light on right wheel
-void turnRight(){
-  setMotors(100,15);
+boolean droppedBass(){
+  return false;
 }
 
-//turns heavy on right wheel, light on left wheel
-void turnLeft(){
-  setMotors(14,100);
-}
 
-//enter left and right speed from -100 to 100
-void setMotors(int l, int r){
-  left.write(map(l,-100,100,0,180));
-  right.write(map(r,-100,100,160,30)); //compensate because other motor is weaker
-}
