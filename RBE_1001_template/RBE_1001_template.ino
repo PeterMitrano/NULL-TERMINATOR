@@ -23,9 +23,9 @@ const int RIGHT_BUMP_PIN = 25;
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 315;
-const int SCORING_WALL_DIST = 340;
-const int FAR_WALL_DIST = 255;
-const int REV_DIST = 90;
+const int SCORING_WALL_DIST = 360;
+const int FAR_WALL_DIST = 185;
+const int REV_DIST = 150;
 const int TOLERANCE = 10;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
@@ -64,7 +64,8 @@ enum STATE {
   LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING, DONE};
 STATE state = LIFTING_FLAP;
 
-int t0;
+int t0=0;
+int dt=0;
 
 void setup() {
   elevator.attach(ELEVATOR_PIN);
@@ -146,7 +147,7 @@ void autoRoutine() {
     setMotors(-50,50);
     break;
   case COLLECTING:
-    setMotors(65,65);
+    setMotors(65,140+dt/750); //this makes it curve more as it goes
     elevator.write(125);
     break;
   case TURNING_TO_SCORE:
@@ -195,7 +196,7 @@ void updateState(){
   //time for each state
   //use t0=millis() at the end of each state to reset the time
 
-    int dt = millis()- t0;
+  dt = millis()- t0;
 
   switch(state){
   case LIFTING_FLAP:
