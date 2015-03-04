@@ -25,15 +25,16 @@ const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 315;
 const int SCORING_WALL_DIST = 340;
 const int FAR_WALL_DIST = 255;
-const int REV_DIST = 90;
+const int END_LINE_TRACK_DIST = 60;
+const int REV_DIST = 110;
 const int TOLERANCE = 10;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
 
 //line sensors
 //1 or HIGH means white
-const int LEFT_SENSOR = 48;
-const int RIGHT_SENSOR = 49;
+const int LEFT_LINE_PIN = 48;
+const int RIGHT_LINE_PIN = 49;
 boolean lastR,lastL;
 
 //Drive train
@@ -61,21 +62,22 @@ const int RIGHT_BUTTON = 6;
 //  then collect balls down and back the course
 //  then score those balls in the shabangabang
 enum STATE {
-  LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING, DONE};
+  LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, FINDING_LINE, LINE_TRACKING, LEAVING_LINE, TURNING_TO_SCORE, SCORING, DONE};
 STATE state = LIFTING_FLAP;
 
 int t0;
 
 void setup() {
+  Serial.begin(9600);
   elevator.attach(ELEVATOR_PIN);
   right.attach(RIGHT_MOTOR_PIN);
   left.attach(LEFT_MOTOR_PIN);
   flap.attach(FLAP_PIN);
   flap.write(180);
+  pinMode(LEFT_LINE_PIN,INPUT_PULLUP);
+  pinMode(RIGHT_LINE_PIN,INPUT_PULLUP);    
   pinMode(LEFT_BUMP_PIN,INPUT_PULLUP);
-  pinMode(RIGHT_BUMP_PIN,INPUT_PULLUP);  
-  pinMode(LEFT_SENSOR,INPUT_PULLUP);
-  pinMode(RIGHT_SENSOR,INPUT_PULLUP);
+  pinMode(RIGHT_BUMP_PIN,INPUT_PULLUP);
   pinMode(KILL_PIN,INPUT_PULLUP);
   pinMode(SCORING_LIMIT_PIN,INPUT_PULLUP);  
 }
@@ -87,7 +89,7 @@ void autonomous(unsigned long time){
   time = time * 1000;
   t0 = millis();
   while ( millis() - startTime <= time){
-    autoRoutine();
+        autoRoutine();
   }
 }
 
@@ -113,8 +115,9 @@ void teleop(unsigned long time){
 }
 
 void loop() {
-  autonomous(20);
-  teleop(150);
+   line_track();  
+//  autonomous(20);
+//  teleop(150);
 }
 
 //////////////////////////////////////////
@@ -143,12 +146,18 @@ void autoRoutine() {
     trackWall(-40);
     break;
   case TURNING_TO_COLLECT:
-    setMotors(-50,50);
+    setMotors(-50,100);
     break;
-  case COLLECTING:
+  case FINDING_LINE:
     setMotors(65,65);
-    elevator.write(125);
+    elevator.write(125);    
     break;
+  case LINE_TRACKING:
+    line_track();
+    break;
+  case LEAVING_LINE:
+    setMotors(45,45);
+    break;    
   case TURNING_TO_SCORE:
     liftFlap();  
     setMotors(-36,40);
@@ -163,6 +172,34 @@ void autoRoutine() {
   }
 }
 
+
+//if you see double black, go full
+//if you see white on left, turn right until you see white on right
+//if you see white on right, turn left until you see white on left
+void line_track(){
+  boolean L = !digitalRead(LEFT_LINE_PIN);
+  boolean R = !digitalRead(RIGHT_LINE_PIN); 
+ 
+  Serial.print(L);
+  Serial.print("   ");
+  Serial.println(R);
+  
+  if (R && L){
+    setMotors(22,22);
+  }
+  else if (L){
+    setMotors(0,25);
+  }
+  else if (R){
+    setMotors(0,25);
+  }
+
+
+  lastR=R;
+  lastL=L;
+
+  delay(20);
+}
 
 //take power from -100 to 100, and follow wall at TRACK_DIST
 void trackWall(int power){
@@ -232,16 +269,27 @@ void updateState(){
   case TURNING_TO_COLLECT:
     if (flatToWall()){
       t0=millis();
-      state=COLLECTING;
+      state=FINDING_LINE;
     }  
     break;
-  case COLLECTING:
-    if (atFarWall()){
+  case FINDING_LINE:
+    if (digitalRead(RIGHT_LINE_PIN)==LOW){
       t0=millis();
-      state = TURNING_TO_SCORE;
-      pulseStopRev();
+      state = LINE_TRACKING;
     }
     break;
+  case LINE_TRACKING:
+    if (doneLineTracking()){
+      t0 = millis();
+      state = LEAVING_LINE;
+    }
+    break;
+  case LEAVING_LINE:
+    if (atFarWall()){
+      t0 = millis();
+      state = TURNING_TO_SCORE;
+    }
+    break; 
   case TURNING_TO_SCORE:
     if (alignedToWall()){
       t0=millis();
@@ -280,6 +328,10 @@ boolean doneReversing(){
   return abs(range(FRONT_RANGEFINDER_PIN) - REV_DIST) < TOLERANCE;  
 }
 
+boolean doneLineTracking(){
+  return abs(range(FRONT_RANGEFINDER_PIN) - END_LINE_TRACK_DIST) < TOLERANCE;
+}
+
 boolean atFarWall(){
   return abs(range(FRONT_RANGEFINDER_PIN) - FAR_WALL_DIST) < TOLERANCE;
 }
@@ -306,4 +358,6 @@ boolean flatToWall(){
 boolean droppedBass(){
   return false;
 }
+
+
 
