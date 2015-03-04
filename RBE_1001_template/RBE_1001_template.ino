@@ -25,7 +25,7 @@ const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 315;
 const int SCORING_WALL_DIST = 360;
 const int FAR_WALL_DIST = 185;
-const int REV_DIST = 150;
+const int REV_DIST = 167;
 const int TOLERANCE = 10;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
@@ -141,13 +141,13 @@ void autoRoutine() {
     setMotors(0,0);    
     break;
   case REVERSING:
-    trackWall(-40);
+    trackWall(-35);
     break;
   case TURNING_TO_COLLECT:
     setMotors(-50,50);
     break;
   case COLLECTING:
-    setMotors(65,140+dt/750); //this makes it curve more as it goes
+    setMotors(65,140+dt/550); //this makes it curve more as it goes
     elevator.write(125);
     break;
   case TURNING_TO_SCORE:
