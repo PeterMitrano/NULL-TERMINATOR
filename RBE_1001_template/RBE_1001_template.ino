@@ -1,6 +1,9 @@
 #include <PPM.h>
 #include <Servo.h>
 
+//chooses between red and blue auto
+const int AUTO_PIN = A2;
+
 //inititialize the motor drive constants to "stopped"
 int left_drive = 90;
 int right_drive = 90;
@@ -24,7 +27,9 @@ const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 315;
 const int SCORING_WALL_DIST = 390;
+const int PIN_DIST = 500;
 const int FAR_WALL_DIST = 175;
+const int PIN_TURN_DIST = 370;
 const int REV_DIST = 30;
 const int TOLERANCE = 13;
 const int TRACK_DIST = 195;
@@ -63,12 +68,13 @@ const int RIGHT_BUTTON = 6;
 //  then score those balls in the shabangabang
 enum STATE {
   LIFTING_FLAP, DROPPING_FLAP, DRIVING, DROPPING, REVERSING, TURNING_TO_COLLECT, COLLECTING, TURNING_TO_SCORE, SCORING, DONE};
-STATE state = LIFTING_FLAP;
+STATE state;
 
 int t0=0;
 int dt=0;
 
 void setup() {
+  Serial.begin(9600);
   elevator.attach(ELEVATOR_PIN);
   right.attach(RIGHT_MOTOR_PIN);
   left.attach(LEFT_MOTOR_PIN);
@@ -88,8 +94,22 @@ void autonomous(unsigned long time){
   unsigned long startTime = millis();
   time = time * 1000;
   t0 = millis();
+  boolean runRedAuto = analogRead(AUTO_PIN) > 512;
+
+  if (runRedAuto){
+    state = DRIVING;
+  }
+  else{
+    state = LIFTING_FLAP;    
+  }
+
   while ( millis() - startTime <= time){
-    autoRoutine();
+    if (runRedAuto){
+      redAuto();
+    }
+    else {
+      blueAuto();
+    }
   }
 }
 
@@ -122,10 +142,37 @@ void loop() {
 //////////////////////////////////////////
 /////////////// AUTONOMOUS ///////////////
 //////////////////////////////////////////
+void redAuto(){
+  updateRedState();
+  switch(state){
+  case DRIVING:
+    setMotors(130,100);
+    break;
+  case TURNING_TO_SCORE:
+    setMotors(-36,40);  
+    break;
+  case SCORING:
+    setMotors(70,70);
+    break;
+  case REVERSING:
+    setMotors(-30,-30);
+    liftFlap();
+    break;
+  case TURNING_TO_COLLECT:
+    setMotors(-180,30);
+    break;
+  case COLLECTING:
+    setMotors(140,100);
+    elevator.write(120);
+    break;
+  case DONE:
+    setMotors(0,0);
+    break;
+  }
+}
 
-
-void autoRoutine() {
-  updateState();
+void blueAuto() {
+  updateBlueState();
 
   switch(state){
   case LIFTING_FLAP:
@@ -193,11 +240,58 @@ void setMotors(int l, int r){
   right.write(map(r,-100,100,160,30)); //compensate because other motor is weaker
 }
 
-void updateState(){
+
+void updateRedState(){
+  dt = millis() - t0;
+
+  Serial.println(state);
+
+  switch(state){
+  case DRIVING:
+    if (atFarWall()){
+      t0=millis();
+      state = TURNING_TO_SCORE;
+      pulseStopRev();
+    }
+    break;
+  case TURNING_TO_SCORE:
+    if (alignedToPin()){
+      t0=millis();
+      state = SCORING;
+    }
+    break;
+  case SCORING:
+    if (dt > 3000){
+      state=REVERSING;
+      t0=millis();
+    }
+      break;    
+  case REVERSING:
+    if (dt>2000){
+      t0=millis();      
+      state = TURNING_TO_COLLECT;
+    }
+    break;
+  case TURNING_TO_COLLECT:
+    if (flatToWall()){
+      t0=millis();      
+      state = COLLECTING;  
+    }
+    break;
+  case COLLECTING:
+    if (dt>3000){
+      t0=millis();
+      state = DONE;
+    }
+    break;
+  }
+}
+
+void updateBlueState(){
   //time for each state
   //use t0=millis() at the end of each state to reset the time
 
-  dt = millis()- t0;
+    dt = millis()- t0;
 
   switch(state){
   case LIFTING_FLAP:
@@ -254,7 +348,7 @@ void updateState(){
     if (atShabangabang()){
       state = DONE;
     }
-    break;    
+    break;
   }
 }
 
@@ -272,6 +366,10 @@ void pulseStopRev(){
 //turns until the back sensor reads a certain distance
 boolean alignedToWall(){
   return abs(range(BACK_RANGEFINDER_PIN) - SCORING_WALL_DIST) < TOLERANCE;
+}
+
+boolean alignedToPin(){
+  return abs(range(BACK_RANGEFINDER_PIN) - PIN_TURN_DIST) < TOLERANCE;
 }
 
 boolean atShabangabang(){
@@ -308,4 +406,20 @@ boolean flatToWall(){
 boolean droppedBass(){
   return false;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
