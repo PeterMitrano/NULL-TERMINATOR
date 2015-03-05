@@ -9,11 +9,15 @@ int left_drive = 90;
 int right_drive = 90;
 int flap_drive = 90;
 int elevator_drive = 70;
+int lifter_drive = 0;
 
 //kill switch
 const int KILL_PIN = 22;
 boolean cancelled = false;
 
+//lifter
+const int LIFTER_PIN = 11;
+Servo lifter;
 //Elevator
 Servo elevator;
 const int ELEVATOR_PIN = 6;
@@ -79,7 +83,9 @@ void setup() {
   right.attach(RIGHT_MOTOR_PIN);
   left.attach(LEFT_MOTOR_PIN);
   flap.attach(FLAP_PIN);
+  lifter.attach(LIFTER_PIN,1000,2000);  
   flap.write(180);
+  lifter.write(90);
   pinMode(LEFT_BUMP_PIN,INPUT_PULLUP);
   pinMode(RIGHT_BUMP_PIN,INPUT_PULLUP);  
   pinMode(LEFT_SENSOR,INPUT_PULLUP);
@@ -102,7 +108,7 @@ void autonomous(unsigned long time){
   else{
     state = LIFTING_FLAP;    
   }
-
+  Serial.println(runRedAuto);
   while ( millis() - startTime <= time){
     if (runRedAuto){
       redAuto();
@@ -128,6 +134,12 @@ void teleop(unsigned long time){
     //remap feeder to slow it down
     elevator_drive = map(ppm.getChannel(LEFT_BUTTON),0,180,50,130);
     elevator.write(elevator_drive);
+    
+    lifter_drive = ppm.getChannel(RIGHT_BUTTON);
+    lifter.write(lifter_drive);
+
+    
+    
     liftFlap();
 
   }
@@ -406,6 +418,7 @@ boolean flatToWall(){
 boolean droppedBass(){
   return false;
 }
+
 
 
 
