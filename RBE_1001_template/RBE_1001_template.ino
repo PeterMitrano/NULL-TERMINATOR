@@ -23,12 +23,13 @@ const int RIGHT_BUMP_PIN = 25;
 const int FRONT_RANGEFINDER_PIN = A0;
 const int BACK_RANGEFINDER_PIN = A1;
 const int WALL_DIST = 315;
-const int SCORING_WALL_DIST = 360;
-const int FAR_WALL_DIST = 185;
-const int REV_DIST = 167;
-const int TOLERANCE = 10;
+const int SCORING_WALL_DIST = 390;
+const int FAR_WALL_DIST = 175;
+const int REV_DIST = 30;
+const int TOLERANCE = 13;
 const int TRACK_DIST = 195;
 const float kPWall = 0.3;
+const float SAMPLE_SIZE = 20;
 
 //line sensors
 //1 or HIGH means white
@@ -147,7 +148,7 @@ void autoRoutine() {
     setMotors(-50,50);
     break;
   case COLLECTING:
-    setMotors(65,140+dt/550); //this makes it curve more as it goes
+    setMotors(65,73+dt/450); //this makes it curve more as it goes
     elevator.write(125);
     break;
   case TURNING_TO_SCORE:
@@ -224,7 +225,7 @@ void updateState(){
     }
     break;
   case REVERSING:
-    if (doneReversing()){
+    if (doneReversing() || dt > 2000){
       t0=millis();
       pulseStopFwd();
       state=TURNING_TO_COLLECT;
@@ -293,10 +294,10 @@ boolean atWall(){
 float range(const int PIN){
   int i,sum=0;
   float avg;
-  for (i=0;i<50;i++){
+  for (i=0;i<SAMPLE_SIZE;i++){
     sum+=analogRead(PIN);
   }
-  avg = sum/50.0;
+  avg = sum/SAMPLE_SIZE;
   return avg;
 }
 
