@@ -111,10 +111,10 @@ void autonomous(unsigned long time){
   Serial.println(runRedAuto);
   while ( millis() - startTime <= time){
     if (runRedAuto){
-      redAuto();
+      //redAuto();
     }
     else {
-      blueAuto();
+      //blueAuto();
     }
   }
 }
@@ -263,7 +263,7 @@ void updateRedState(){
     if (atFarWall()){
       t0=millis();
       state = TURNING_TO_SCORE;
-      pulseStopRev();
+
     }
     break;
   case TURNING_TO_SCORE:
@@ -333,7 +333,6 @@ void updateBlueState(){
   case REVERSING:
     if (doneReversing() || dt > 2000){
       t0=millis();
-      pulseStopFwd();
       state=TURNING_TO_COLLECT;
     }
     break;
@@ -347,7 +346,6 @@ void updateBlueState(){
     if (atFarWall()){
       t0=millis();
       state = TURNING_TO_SCORE;
-      pulseStopRev();
     }
     break;
   case TURNING_TO_SCORE:
@@ -363,17 +361,6 @@ void updateBlueState(){
     break;
   }
 }
-
-//pulses reverse for a sec to stop it
-void pulseStopFwd(){
-  setMotors(30,30);
-  delay(50);
-}      
-
-void pulseStopRev(){
-  setMotors(-30,-30);
-  delay(50);
-}      
 
 //turns until the back sensor reads a certain distance
 boolean alignedToWall(){
